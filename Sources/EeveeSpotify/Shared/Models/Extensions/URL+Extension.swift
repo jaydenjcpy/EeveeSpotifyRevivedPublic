@@ -10,10 +10,11 @@ extension URL {
     }
     
     var isShuffle: Bool {
-        self.path.contains("v1/shuffle") || 
-        self.path.contains("v1/recommendations") ||
-        self.path.contains("v1/context-resolve") ||
-        self.path.contains("v1/next-tracks")
+        self.path.contains("shuffle") || 
+        self.path.contains("recommendations") ||
+        self.path.contains("context-resolve") ||
+        self.path.contains("next-tracks") ||
+        self.path.contains("weighted-shuffle")
     }
     
     var isPremiumPlanRow: Bool {
