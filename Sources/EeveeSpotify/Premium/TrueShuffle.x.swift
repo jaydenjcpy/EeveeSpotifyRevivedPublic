@@ -4,6 +4,9 @@ import ObjectiveC.runtime
 enum TrueShuffleHookInstaller {
     private static var didInstall = false
     
+    // Using a static variable to store the original implementation to avoid capture issues in blocks
+    private static var originalWeightIMP: IMP?
+    
     private typealias WeightForTrackIMP = @convention(c) (
         AnyObject,
         Selector,
@@ -31,13 +34,18 @@ enum TrueShuffleHookInstaller {
             writeDebugLog("True Shuffle: failed to enumerate Objective-C classes")
             return
         }
-        defer { free(UnsafeMutableRawPointer(classes)) }
+        
+        let classesPtr = UnsafeMutableRawPointer(classes)
+        defer { free(classesPtr) }
         
         for index in 0 ..< Int(classCount) {
-            let cls = classes[index]
+            let cls: AnyClass = classes[index]
             let className = NSStringFromClass(cls)
             
-            guard className.lowercased().contains("shuff") else {
+            // Be more specific with class names to avoid hooking unrelated classes
+            let lowerClassName = className.lowercased()
+            guard lowerClassName.contains("shuff") && 
+                  (lowerClassName.contains("service") || lowerClassName.contains("impl")) else {
                 continue
             }
             
@@ -45,7 +53,8 @@ enum TrueShuffleHookInstaller {
                 continue
             }
             
-            let originalWeightIMP = method_getImplementation(weightMethod)
+            // Store the original implementation
+            self.originalWeightIMP = method_getImplementation(weightMethod)
             
             let weightBlock: @convention(block) (AnyObject, AnyObject, Bool, Bool) -> Double = {
                 object,
@@ -53,7 +62,11 @@ enum TrueShuffleHookInstaller {
                 _,
                 _
             in
-                let original = unsafeBitCast(originalWeightIMP, to: WeightForTrackIMP.self)
+                guard let originalIMP = TrueShuffleHookInstaller.originalWeightIMP else {
+                    return 0.0
+                }
+                let original = unsafeBitCast(originalIMP, to: WeightForTrackIMP.self)
+                // Call original with false for recommended and mergedList to bypass weighting
                 return original(object, weightSelector, track, false, false)
             }
             
@@ -65,9 +78,12 @@ enum TrueShuffleHookInstaller {
                     _,
                     _
                 in
-                    nil
+                    // Returning nil here might cause a crash if the app expects an array.
+                    // It's safer to not hook this or return an empty array if we knew the type.
+                    // For now, let's skip hooking this method as the weight hook is usually sufficient.
+                    return nil 
                 }
-                method_setImplementation(weightedListMethod, imp_implementationWithBlock(weightedListBlock as Any))
+                // method_setImplementation(weightedListMethod, imp_implementationWithBlock(weightedListBlock as Any))
             }
             
             didInstall = true
