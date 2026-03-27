@@ -1,72 +1,71 @@
 import Foundation
 
-extension UserDefaults {
-    static var container: UserDefaults = .standard
-    
-    private static let musixmatchTokenKey = "musixmatchToken"
-    private static let darkPopUpsKey = "darkPopUps"
-    private static let patchTypeKey = "patchType"
-    private static let trueShuffleEnabledKey = "trueShuffleEnabled"
-    private static let overwriteConfigurationKey = "overwriteConfiguration"
-    private static let lyricsColorsKey = "lyricsColors"
-    private static let lyricsOptionsKey = "lyricsOptions"
-    private static let hasShownCommonIssuesTipKey = "hasShownCommonIssuesTip"
-
-    static var musixmatchToken: String {
-        get {
-            container.string(forKey: musixmatchTokenKey) ?? ""
-        }
-        set (token) {
-            container.set(token, forKey: musixmatchTokenKey)
-        }
-    }
-
-    static var darkPopUps: Bool {
-        get {
-            container.object(forKey: darkPopUpsKey) as? Bool ?? true
-        }
-        set (darkPopUps) {
-            container.set(darkPopUps, forKey: darkPopUpsKey)
-        }
-    }
-
-    static var patchType: EeveePatchType {
-        get {
-            if let rawValue = container.object(forKey: patchTypeKey) as? Int {
-                return EeveePatchType(rawValue: rawValue) ?? .requests
-            }
-
-            return .notSet
-        }
-        set (patchType) {
-            container.set(patchType.rawValue, forKey: patchTypeKey)
-        }
-    }
-
-    static var trueShuffleEnabled: Bool {
-        get {
-            container.object(forKey: trueShuffleEnabledKey) as? Bool ?? true
-        }
-        set (isEnabled) {
-            container.set(isEnabled, forKey: trueShuffleEnabledKey)
-        }
+extension URL {
+    var isLyrics: Bool {
+        self.path.contains("color-lyrics/v2")
     }
     
-    static var overwriteConfiguration: Bool {
-        get {
-            container.bool(forKey: overwriteConfigurationKey)
-        }
-        set (overwriteConfiguration) {
-            container.set(overwriteConfiguration, forKey: overwriteConfigurationKey)
-        }
+    var isPlanOverview: Bool {
+        self.path.contains("GetPlanOverview")
     }
     
-    static var hasShownCommonIssuesTip: Bool {
-        get {
-            container.bool(forKey: hasShownCommonIssuesTipKey)
-        }
-        set (hasShownCommonIssuesTip) {
-            container.set(hasShownCommonIssuesTip, forKey: hasShownCommonIssuesTipKey)
-        }
+    var isPremiumPlanRow: Bool {
+        self.path.contains("v1/GetPremiumPlanRow")
+    }
+    
+    var isPremiumBadge: Bool {
+        self.path.contains("GetYourPremiumBadge")
+    }
+
+    var isOpenSpotifySafariExtension: Bool {
+        self.host == "eevee"
+    }
+    
+    var isCustomize: Bool {
+        self.path.contains("v1/customize")
+    }
+    
+    var isBootstrap: Bool {
+        self.path.contains("v1/bootstrap")
+    }
+
+    // Blocked endpoint matchers (session protection)
+
+    var isDeleteToken: Bool {
+        self.path.contains("DeleteToken")
+    }
+
+    var isAccountValidate: Bool {
+        self.path.contains("signup/public")
+    }
+
+    var isOndemandSelector: Bool {
+        self.path.contains("select-ondemand-set")
+    }
+
+    var isTrialsFacade: Bool {
+        self.path.contains("trials-facade/start-trial")
+    }
+
+    var isPremiumMarketing: Bool {
+        self.path.contains("premium-marketing/upsellOffer")
+    }
+
+    var isPendragonFetchMessageList: Bool {
+        self.path.contains("pendragon") && self.path.contains("FetchMessageList")
+    }
+
+    var isPushkaTokens: Bool {
+        self.path.contains("pushka-tokens")
+    }
+
+    // Additional session protection endpoints
+    var isSessionInvalidation: Bool {
+        self.path.contains("logout") || self.path.contains("sign-out") ||
+        self.path.contains("session/purge") || self.path.contains("token/revoke") ||
+        self.path.contains("auth/expire") ||
+        (self.path.contains("melody") && self.path.contains("check")) ||
+        self.path.contains("product-state") ||
+        (self.path.contains("license") && self.path.contains("check"))
     }
 }
