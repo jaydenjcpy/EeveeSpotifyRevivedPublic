@@ -146,7 +146,6 @@ struct EeveeSpotify: Tweak {
             // Premium patching
             if UserDefaults.patchType.isPatching {
                 BasePremiumPatchingGroup().activate()
-                TrueShuffleHookInstaller.installIfEnabled()
             }
             
             let lyricsEnabled = UserDefaults.lyricsSource.isReplacingLyrics
@@ -216,7 +215,6 @@ struct EeveeSpotify: Tweak {
         
         if UserDefaults.patchType.isPatching {
             activatePremiumPatchingGroup()
-            TrueShuffleHookInstaller.installIfEnabled()
         }
         
         if UserDefaults.lyricsSource.isReplacingLyrics {
