@@ -48,18 +48,18 @@ struct EeveePatchingSettingsView: View {
                         isOn: $overwriteConfiguration
                     )
                 }
+            }
 
-                Section(
-                    footer: Text(
-                        "true_shuffle_description"
-                            .localizeWithFormat("restart_is_required_description".localized)
-                    )
-                ) {
-                    Toggle(
-                        "enable_true_shuffle".localized,
-                        isOn: $trueShuffleEnabled
-                    )
-                }
+            Section(
+                footer: Text(
+                    "true_shuffle_description"
+                        .localizeWithFormat("restart_is_required_description".localized)
+                )
+            ) {
+                Toggle(
+                    "enable_true_shuffle".localized,
+                    isOn: $trueShuffleEnabled
+                )
             }
             
             NonIPadSpacerView()
