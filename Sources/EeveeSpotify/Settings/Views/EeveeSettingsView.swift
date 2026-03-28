@@ -1,166 +1,109 @@
 import SwiftUI
-import UIKit
 
-struct EeveeSettingsView: View {
-    let navigationController: UINavigationController
-    static let spotifyAccentColor = Color(hex: "#1ed760")
+struct EeveeLyricsSettingsView: View {
+    @StateObject var viewModel = EeveeLyricsSettingsViewModel()
     
-    @State private var hasShownCommonIssuesTip = UserDefaults.hasShownCommonIssuesTip
-    @State private var isClearingData = false
-    
-    private func pushSettingsController(with view: any View, title: String) {
-        let viewController = EeveeSettingsViewController(
-            navigationController.view.frame,
-            settingsView: AnyView(view),
-            navigationTitle: title
-        )
-        navigationController.pushViewController(viewController, animated: true)
-    }
-    
-    init(navigationController: UINavigationController) {
-        self.navigationController = navigationController
-        UIView.appearance().tintColor = UIColor(EeveeSettingsView.spotifyAccentColor)
-    }
-
     var body: some View {
         List {
-            EeveeSettingsVersionView()
+            lyricsSourceSection()
             
-            if !hasShownCommonIssuesTip {
-                CommonIssuesTipView(
-                    onDismiss: {
-                        hasShownCommonIssuesTip = true
-                        UserDefaults.hasShownCommonIssuesTip = true
-                    }
-                )
-            }
-            
-            //
-            
-            Button {
-                pushSettingsController(
-                    with: EeveePatchingSettingsView(),
-                    title: "patching".localized
-                )
-            } label: {
-                NavigationSectionView(
-                    color: .orange,
-                    title: "patching".localized,
-                    imageSystemName: "hammer.fill"
-                )
-            }
-            
-            Button {
-                pushSettingsController(
-                    with: EeveeLyricsSettingsView(),
-                    title: "lyrics".localized
-                )
-            } label: {
-                NavigationSectionView(
-                    color: .blue,
-                    title: "lyrics".localized,
-                    imageSystemName: "quote.bubble.fill"
-                )
-            }
-            
-            Button {
-                pushSettingsController(
-                    with: EeveeUISettingsView(),
-                    title: "customization".localized
-                )
-            } label: {
-                NavigationSectionView(
-                    color: Color(hex: "#64D2FF"),
-                    title: "customization".localized,
-                    imageSystemName: "paintpalette.fill"
-                )
-            }
-            
-            Button {
-                pushSettingsController(
-                    with: EeveeExperimentsSettingsView(),
-                    title: "experiments".localized
-                )
-            } label: {
-                NavigationSectionView(
-                    color: .purple,
-                    title: "experiments".localized,
-                    imageSystemName: "sparkle"
-                )
-            }
-            
-            //
-            
-            Section(header: Text("Debug"), footer: Text("Export or clear the debug log.")) {
-                Button {
-                    let logPath = NSTemporaryDirectory() + "eeveespotify_debug.log"
-                    guard FileManager.default.fileExists(atPath: logPath),
-                          let logData = FileManager.default.contents(atPath: logPath),
-                          logData.count > 0 else {
-                        PopUpHelper.showPopUp(message: "No debug log found. The log starts recording when the app launches.", buttonText: "OK")
-                        return
-                    }
-                    let logURL = URL(fileURLWithPath: logPath)
-                    let activityVC = UIActivityViewController(activityItems: [logURL], applicationActivities: nil)
-                    if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let rootVC = scene.windows.first?.rootViewController {
-                        var topVC = rootVC
-                        while let presented = topVC.presentedViewController { topVC = presented }
-                        if let popover = activityVC.popoverPresentationController {
-                            popover.sourceView = topVC.view
-                            popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
-                        }
-                        topVC.present(activityVC, animated: true)
-                    }
-                } label: {
-                    HStack {
-                        Image(systemName: "square.and.arrow.up")
-                        Text("Export Debug Log")
-                    }
+            if viewModel.lyricsSource != .notReplaced {
+                if viewModel.lyricsSource != .genius {
+                    geniusFallbackSection()
                 }
                 
-                Button {
-                    let logPath = NSTemporaryDirectory() + "eeveespotify_debug.log"
-                    try? "".write(toFile: logPath, atomically: true, encoding: .utf8)
-                    writeDebugLog("Log cleared by user")
-                    PopUpHelper.showPopUp(message: "Debug log cleared.", buttonText: "OK")
-                } label: {
-                    HStack {
-                        Image(systemName: "trash")
-                        Text("Clear Debug Log")
-                    }
-                    .foregroundColor(.red)
+                hideOnErrorSection()
+                romanizedLyricsSection()
+                
+                if viewModel.lyricsSource == .musixmatch {
+                    musixmatchLanguageSection()
                 }
             }
             
-            Section(footer: Text("reset_data_description".localized)) {
-                Button {
-                    isClearingData = true
-                    
-                    DispatchQueue.global(qos: .userInitiated).async {
-                        OfflineHelper.resetData(clearCaches: true)
-                        
-                        DispatchQueue.main.async {
-                            exitApplication()
-                        }
-                    }
-                } label: {
-                    if isClearingData {
-                        ProgressView()
-                    }
-                    else {
-                        Text("reset_data".localized)
-                    }
-                }
-            }
+            NonIPadSpacerView()
+        }
+        .onReceive(viewModel.musixmatchTokenInputAlertPublisher) { showAnonymousTokenOption in
+            showMusixmatchTokenAlert(UserDefaults.lyricsSource, showAnonymousTokenOption)
         }
         .listStyle(GroupedListStyle())
-        
-        .animation(.default, value: isClearingData)
-        .animation(.default, value: hasShownCommonIssuesTip)
-        
-        .onAppear {
-            WindowHelper.shared.overrideUserInterfaceStyle(.dark)
+        .disabled(viewModel.isRequestingMusixmatchToken)
+        .animation(.default, value: viewModel.animationValues)
+    }
+    
+    @ViewBuilder private func lyricsSourceSection() -> some View {
+        Section {
+            Picker(
+                "lyrics_source".localized,
+                selection: $viewModel.lyricsSource
+            ) {
+                ForEach(LyricsSource.allCases, id: \.self) { source in
+                    Text(source.description).tag(source)
+                }
+            }
+        } footer: {
+            Text("lyrics_source_description".localized)
+        }
+    }
+    
+    @ViewBuilder private func geniusFallbackSection() -> some View {
+        Section {
+            Toggle(
+                "genius_fallback".localized,
+                isOn: $viewModel.lyricsOptions.geniusFallback
+            )
+            
+            if viewModel.lyricsOptions.geniusFallback {
+                Toggle(
+                    "show_fallback_reasons".localized,
+                    isOn: $viewModel.lyricsOptions.showFallbackReasons
+                )
+            }
+        } footer: {
+            Text("genius_fallback_description"
+                .localizeWithFormat(viewModel.lyricsSource.description))
+        }
+    }
+    
+    @ViewBuilder private func romanizedLyricsSection() -> some View {
+        Section {
+            Toggle(
+                "romanized_lyrics".localized,
+                isOn: $viewModel.lyricsOptions.romanization
+            )
+        } footer: {
+            Text("romanized_lyrics_description".localized)
+        }
+    }
+    
+    @ViewBuilder private func hideOnErrorSection() -> some View {
+        Section {
+            Toggle(
+                "hide_lyrics_on_error".localized,
+                isOn: $viewModel.lyricsOptions.hideOnError
+            )
+        } footer: {
+            Text("hide_lyrics_on_error_description".localized)
+        }
+    }
+    
+    @ViewBuilder private func musixmatchLanguageSection() -> some View {
+        Section {
+            HStack {
+                Text("musixmatch_language".localized)
+                
+                Spacer()
+                
+                TextField("en", text: $viewModel.lyricsOptions.musixmatchLanguage)
+                    .frame(maxWidth: 20)
+                    .foregroundColor(.gray)
+            }
+            .icon(
+                "exclamationmark.triangle.fill",
+                color: .yellow,
+                when: $viewModel.showMusixmatchInvalidLanguageWarning
+            )
+        } footer: {
+            Text("musixmatch_language_description".localized)
         }
     }
 }
