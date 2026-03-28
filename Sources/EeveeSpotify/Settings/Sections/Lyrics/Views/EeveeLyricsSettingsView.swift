@@ -30,21 +30,6 @@ struct EeveeLyricsSettingsView: View {
         .animation(.default, value: viewModel.animationValues)
     }
     
-    @ViewBuilder private func lyricsSourceSection() -> some View {
-        Section {
-            Picker(
-                "lyrics_source".localized,
-                selection: $viewModel.lyricsSource
-            ) {
-                ForEach(LyricsSource.allCases, id: \.self) { source in
-                    Text(source.description).tag(source)
-                }
-            }
-        } footer: {
-            Text("lyrics_source_description".localized)
-        }
-    }
-    
     @ViewBuilder private func geniusFallbackSection() -> some View {
         Section {
             Toggle(
