@@ -1,7 +1,7 @@
 import Foundation
 
 extension UserDefaults {
-    static var container: UserDefaults = .standard
+    static var container: UserDefaults = UserDefaults(suiteName: "im.eevee.EeveeSpotify") ?? .standard
     
     private static let musixmatchTokenKey = "musixmatchToken"
     private static let darkPopUpsKey = "darkPopUps"
