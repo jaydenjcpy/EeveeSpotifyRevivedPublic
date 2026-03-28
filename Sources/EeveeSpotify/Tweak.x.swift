@@ -1,201 +1,86 @@
-import Orion
-import EeveeSpotifyC
-import UIKit
+import Foundation
+import ObjectiveC.runtime
 
-func writeDebugLog(_ message: String) {
-    // Log to system console
-    NSLog("[EeveeSpotify] %@", message)
-
-    let logPath = NSTemporaryDirectory() + "eeveespotify_debug.log"
-    let timestamp = Date().description
-    let logMessage = "[\(timestamp)] \(message)\n"
+enum TrueShuffleHookInstaller {
+    private static var didInstall = false
     
-    if FileManager.default.fileExists(atPath: logPath) {
-        if let fileHandle = FileHandle(forWritingAtPath: logPath) {
-            fileHandle.seekToEndOfFile()
-            if let data = logMessage.data(using: .utf8) {
-                fileHandle.write(data)
-            }
-            fileHandle.closeFile()
+    private typealias WeightForTrackIMP = @convention(c) (
+        AnyObject,
+        Selector,
+        AnyObject,
+        Bool,
+        Bool
+    ) -> Double
+
+    static func installIfEnabled() {
+        guard UserDefaults.trueShuffleEnabled else {
+            writeDebugLog("True Shuffle is disabled in settings; skipping runtime hook install")
+            return
         }
-    } else {
-        try? logMessage.write(toFile: logPath, atomically: true, encoding: .utf8)
+        install()
     }
-}
 
-// Timestamp of tweak initialization — persists across Orion reinits within the same process
-// using an environment variable. This prevents the 30s auth window from resetting
-// when the C++ timer triggers a session reinit cycle.
-let tweakInitTime: Date = {
-    if let existing = getenv("EEVEE_BOOT_TIME"),
-       let interval = Double(String(cString: existing)) {
-        return Date(timeIntervalSince1970: interval)
-    }
-    let now = Date()
-    setenv("EEVEE_BOOT_TIME", "\(now.timeIntervalSince1970)", 1)
-    return now
-}()
-
-func exitApplication() {
-    UIControl().sendAction(#selector(URLSessionTask.suspend), to: UIApplication.shared, for: nil)
-    Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { _ in
-        exit(EXIT_SUCCESS)
-    }
-}
-
-struct BasePremiumPatchingGroup: HookGroup { }
-
-struct IOS14PremiumPatchingGroup: HookGroup { }
-struct NonIOS14PremiumPatchingGroup: HookGroup { }
-struct IOS14And15PremiumPatchingGroup: HookGroup { }
-struct V91PremiumPatchingGroup: HookGroup { } // For Spotify 9.1.x versions
-struct LatestPremiumPatchingGroup: HookGroup { }
-
-func activatePremiumPatchingGroup() {
-    BasePremiumPatchingGroup().activate()
-    
-    if EeveeSpotify.hookTarget == .lastAvailableiOS14 {
-        IOS14PremiumPatchingGroup().activate()
-    }
-    else if EeveeSpotify.hookTarget == .v91 {
-        // 9.1.x versions: Use NonIOS14 hooks but skip offline content hooks
-        NonIOS14PremiumPatchingGroup().activate()
-        // Only activate if Spotify's UIView category method exists in this build —
-        // the method was removed/renamed in 9.1.28 and hooking a missing method is a fatal crash.
-        let trackRowsSel = Selector(("initWithViewURI:onDemandSet:onDemandTrialService:trackRowsEnabled:productState:"))
-        if UIView.instancesRespond(to: trackRowsSel) {
-            V91PremiumPatchingGroup().activate()
-        }
-    }
-    else {
-        // For other versions, activate all features normally
-        NonIOS14PremiumPatchingGroup().activate()
+    private static func install() {
+        guard !didInstall else { return }
         
-        if EeveeSpotify.hookTarget == .lastAvailableiOS15 {
-            IOS14And15PremiumPatchingGroup().activate()
-        }
-        else {
-            LatestPremiumPatchingGroup().activate()
-        }
-    }
-}
-
-struct EeveeSpotify: Tweak {
-    static let version = "6.6.2"
-    static let buildNumber = "1"
-    
-    static var hookTarget: VersionHookTarget {
-        let version = Bundle.main.infoDictionary!["CFBundleShortVersionString"] as! String
+        let weightSelector = NSSelectorFromString("weightForTrack:recommendedTrack:mergedList:")
+        let weightedListSelector = NSSelectorFromString("weightedShuffleListWithTracks:recommendations:")
         
-        NSLog("[EeveeSpotify] Detected Spotify version: \(version)")
+        var classCount: UInt32 = 0
+        guard let classes = objc_copyClassList(&classCount) else {
+            writeDebugLog("True Shuffle: failed to enumerate Objective-C classes")
+            return
+        }
+        defer { free(classes) }
         
-        switch version {
-        case "9.0.48":
-            return .lastAvailableiOS15
-        case "8.9.8":
-            return .lastAvailableiOS14
-        case _ where version.contains("9.1"):
-            // 9.1.x versions don't have offline content helper classes
-            return .v91
-        default:
-            return .latest
-        }
-    }
-    
-    init() {
-        // Activate session logout protection first (all versions)
-        SessionLogoutHookGroup().activate()
-
-        let spotifyVersion = Bundle.main.infoDictionary!["CFBundleShortVersionString"] as! String
-        let spotifyBuild = Bundle.main.infoDictionary!["CFBundleVersion"] as? String ?? "?"
-        let iosVersion = UIDevice.current.systemVersion
-        let deviceModel = UIDevice.current.model
-
-        writeDebugLog("=== EeveeSpotify \(EeveeSpotify.version) (build \(EeveeSpotify.buildNumber)) starting ===")
-        writeDebugLog("[INIT] Spotify: \(spotifyVersion) (build \(spotifyBuild))")
-        writeDebugLog("[INIT] iOS: \(iosVersion), Device: \(deviceModel)")
-        writeDebugLog("[INIT] Hook target: \(EeveeSpotify.hookTarget)")
-        writeDebugLog("[INIT] Patch type: \(UserDefaults.patchType)")
-        writeDebugLog("[INIT] Lyrics source: \(UserDefaults.lyricsSource)")
-        writeDebugLog("[INIT] tweakInitTime: \(tweakInitTime)")
-
-        // Verify critical hook targets exist
-        let hookTargets: [(String, String)] = [
-            ("SPTAuthSessionImplementation", "SPTAuthSession"),
-            ("_TtC24Connectivity_SessionImpl18SessionServiceImpl", "SessionServiceImpl"),
-            ("SPTAuthLegacyLoginControllerImplementation", "LegacyLoginController"),
-            ("_TtC24Connectivity_SessionImplP33_831B98CC28223E431E21CD27ADD20AF222OauthAccessTokenBridge", "OauthAccessTokenBridge"),
-            ("ARTWebSocketTransport", "AblyWebSocket"),
-            ("ARTSRWebSocket", "AblySRWebSocket"),
-        ]
-        var allFound = true
-        for (className, label) in hookTargets {
-            if NSClassFromString(className) != nil {
-                writeDebugLog("[INIT] \(label) class found")
-            } else {
-                writeDebugLog("[INIT] MISSING class for \(label): \(className)")
-                allFound = false
-            }
-        }
-        if allFound {
-            writeDebugLog("[INIT] All \(hookTargets.count) hook targets verified")
-        }
-
-        // For 9.1.x, activate premium patching and lyrics
-        if EeveeSpotify.hookTarget == .v91 {
+        for index in 0 ..< Int(classCount) {
+            let cls = classes[index]
+            let className = NSStringFromClass(cls)
             
-            // True Shuffle
-            TrueShuffleHookInstaller.installIfEnabled()
-            
-            // Premium patching
-            if UserDefaults.patchType.isPatching {
-                BasePremiumPatchingGroup().activate()
+            // Look for classes containing "Shuffle" in their name
+            guard className.lowercased().contains("shuff") else {
+                continue
             }
             
-            let lyricsEnabled = UserDefaults.lyricsSource.isReplacingLyrics
-            
-            if lyricsEnabled {
-                BaseLyricsGroup().activate()
-                V91LyricsGroup().activate()
+            // Check if it has the weightForTrack method
+            guard let weightMethod = class_getInstanceMethod(cls, weightSelector) else {
+                continue
             }
             
-            // Settings integration
-            UniversalSettingsIntegrationGroup().activate()
+            let originalWeightIMP = method_getImplementation(weightMethod)
             
-            NSLog("[EeveeSpotify] Initialization complete for 9.1.x")
+            // Create a block that always returns original weight but with recommendedTrack set to false
+            let weightBlock: @convention(block) (AnyObject, AnyObject, Bool, Bool) -> Double = {
+                object,
+                track,
+                _,
+                _
+            in
+                let original = unsafeBitCast(originalWeightIMP, to: WeightForTrackIMP.self)
+                // Call original with recommendedTrack: false, mergedList: false
+                return original(object, weightSelector, track, false, false)
+            }
+            
+            method_setImplementation(weightMethod, imp_implementationWithBlock(weightBlock as Any))
+            
+            // Also nullify the weightedShuffleListWithTracks:recommendations: method if it exists
+            if let weightedListMethod = class_getInstanceMethod(cls, weightedListSelector) {
+                let weightedListBlock: @convention(block) (AnyObject, AnyObject, AnyObject) -> AnyObject? = {
+                    _,
+                    _,
+                    _
+                in
+                    return nil
+                }
+                method_setImplementation(weightedListMethod, imp_implementationWithBlock(weightedListBlock as Any))
+            }
+            
+            didInstall = true
+            writeDebugLog("True Shuffle hooks installed on class: \(className)")
+            // We found the main shuffle class, we can stop
             return
         }
         
-        // For other versions, activate all features normally
-        if UserDefaults.experimentsOptions.showInstagramDestination {
-            InstgramDestinationGroup().activate()
-        }
-        
-        if UserDefaults.darkPopUps {
-            DarkPopUps().activate()
-        }
-        
-        if UserDefaults.patchType.isPatching {
-            activatePremiumPatchingGroup()
-        }
-        
-        // True Shuffle
-        TrueShuffleHookInstaller.installIfEnabled()
-        
-        if UserDefaults.lyricsSource.isReplacingLyrics {
-            BaseLyricsGroup().activate()
-            LyricsErrorHandlingGroup().activate()
-            
-            if EeveeSpotify.hookTarget == .latest {
-                ModernLyricsGroup().activate()
-            }
-            else {
-                LegacyLyricsGroup().activate()
-            }
-        }
-        
-        // Always activate settings integration (except for 9.1.x which exits early above)
-        UniversalSettingsIntegrationGroup().activate()
-        SettingsIntegrationGroup().activate()
+        writeDebugLog("True Shuffle: no compatible shuffle class found; feature not applied")
     }
 }
