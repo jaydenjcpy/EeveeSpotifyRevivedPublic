@@ -62,6 +62,22 @@ extension URL {
     var isPushkaTokens: Bool {
         self.path.contains("pushka-tokens")
     }
+    
+    var isAdRelated: Bool {
+        let path = self.path.lowercased()
+        return path.contains("/ads/") || 
+               path.contains("/ad-logic/") ||
+               path.contains("/ad-slot/") ||
+               path.contains("/ad-inventory/") ||
+               path.contains("/sponsored/") ||
+               path.contains("/promoted/") ||
+               path.contains("/upsell/") ||
+               path.contains("/campaign/") ||
+               path.contains("/billboard/") ||
+               path.contains("/banner/") ||
+               path.contains("doubleclick") ||
+               path.contains("googlesyndication")
+    }
 
     // Additional session protection endpoints
     var isSessionInvalidation: Bool {
