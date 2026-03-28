@@ -1,12 +1,12 @@
 import Foundation
 
 enum LyricsSource: Int, CaseIterable, CustomStringConvertible {
-    case genius
-    case lrclib
-    case musixmatch
-    case petit
-    case notReplaced
-    case netease
+    case genius = 0
+    case lrclib = 1
+    case musixmatch = 2
+    case petit = 3
+    case notReplaced = 4
+    case netease = 5
     
     // All sources enabled now that we have reliable metadata fetching
     public static var allCases: [LyricsSource] {
