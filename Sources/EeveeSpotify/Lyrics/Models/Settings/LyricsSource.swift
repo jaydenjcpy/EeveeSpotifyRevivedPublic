@@ -6,10 +6,11 @@ enum LyricsSource: Int, CaseIterable, CustomStringConvertible {
     case musixmatch
     case petit
     case notReplaced
+    case netease
     
     // All sources enabled now that we have reliable metadata fetching
     public static var allCases: [LyricsSource] {
-        return [.musixmatch]
+        return [.genius, .lrclib, .musixmatch, .petit, .netease]
     }
 
     // swift 5.8 compatible
@@ -25,6 +26,8 @@ enum LyricsSource: Int, CaseIterable, CustomStringConvertible {
         return "PetitLyrics"
     case .notReplaced:
         return "Spotify"
+    case .netease:
+        return "NetEase Cloud Music"
     }
     }
 
@@ -32,6 +35,8 @@ enum LyricsSource: Int, CaseIterable, CustomStringConvertible {
     var isReplacingLyrics: Bool { self != .notReplaced }
     
     static var defaultSource: LyricsSource {
-        .musixmatch
+        Locale.isInRegion("JP", orHasLanguage: "ja")
+            ? .petit
+            : .netease
     }
 }
