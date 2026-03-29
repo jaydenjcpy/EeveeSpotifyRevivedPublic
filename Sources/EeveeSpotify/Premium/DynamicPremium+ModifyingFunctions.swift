@@ -169,6 +169,22 @@ private let propertyReplacements = [
     EeveePropertyReplacement(name: "enable_sponsored_podcast_sponsored_ad", modification: .setBool(false)),
     EeveePropertyReplacement(name: "enable_sponsored_podcast_sponsored_ads", modification: .setBool(false)),
     
+    // Additional Ad & Pop-up Blocking
+    EeveePropertyReplacement(name: "enable_popups", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_popup", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "show_popups", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "show_popup", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_interstitials", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_interstitial", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_overlays", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_overlay", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_promotions_on_home", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_promotions_on_search", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_search_page_ads", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_home_page_ads", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_billboard", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_billboards", modification: .setBool(false)),
+
     // 😡😡😡 spotify, stop changing the scroll logic
     EeveePropertyReplacement(name: "should_nova_scroll_use_scrollsita", modification: .remove)
 ]
