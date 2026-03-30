@@ -65,24 +65,84 @@ extension URL {
     
     var isAdRelated: Bool {
         let path = self.path.lowercased()
-        return path.contains("/ads/") || 
-               path.contains("/ad-logic/") ||
-               path.contains("/ad-slot/") ||
-               path.contains("/ad-inventory/") ||
-               path.contains("/sponsored/") ||
-               path.contains("/promoted/") ||
-               path.contains("/upsell/") ||
-               path.contains("/campaign/") ||
-               path.contains("/billboard/") ||
-               path.contains("/banner/") ||
-               path.contains("/interstitial/") ||
-               path.contains("/overlay/") ||
-               path.contains("/popup/") ||
-               path.contains("/pop-up/") ||
-               path.contains("/search-ad/") ||
-               path.contains("/home-ad/") ||
-               path.contains("doubleclick") ||
-               path.contains("googlesyndication")
+        let host = (self.host ?? "").lowercased()
+
+        // Block known third-party ad networks by host
+        let adHosts = [
+            "doubleclick.net", "googlesyndication.com", "googleadservices.com",
+            "adservice.google.com", "moatads.com", "scorecardresearch.com",
+            "omtrdc.net", "demdex.net", "ads.spotify.com", "adserver.spotify.com",
+            "spclient.wg.spotify.com"  // spclient serves ad payloads too
+        ]
+        for adHost in adHosts {
+            if host.contains(adHost) && (
+                path.contains("/ads/") || path.contains("/ad/") ||
+                path.contains("advert") || path.contains("sponsor") ||
+                path.contains("campaign") || path.contains("promoted") ||
+                path.contains("billboard") || path.contains("banner") ||
+                path.contains("interstitial") || path.contains("overlay") ||
+                path.contains("takeover") || path.contains("native")
+            ) {
+                return true
+            }
+        }
+
+        // Block ad-related path segments (Spotify's own ad delivery endpoints)
+        return path.contains("/ads/")
+            || path.contains("/ad/")
+            || path.contains("/ad-logic/")
+            || path.contains("/ad-slot/")
+            || path.contains("/ad-slots/")
+            || path.contains("/ad-inventory/")
+            || path.contains("/ad-targeting/")
+            || path.contains("/ad-decision/")
+            || path.contains("/ad-request/")
+            || path.contains("/ad-event/")
+            || path.contains("/ad-impression/")
+            || path.contains("/ad-click/")
+            || path.contains("/ad-tracking/")
+            || path.contains("/ad-measurement/")
+            || path.contains("/advert/")
+            || path.contains("/adverts/")
+            || path.contains("/advertising/")
+            || path.contains("/sponsored/")
+            || path.contains("/promoted/")
+            || path.contains("/upsell/")
+            || path.contains("/upsells/")
+            || path.contains("/campaign/")
+            || path.contains("/campaigns/")
+            || path.contains("/billboard/")
+            || path.contains("/billboards/")
+            || path.contains("/banner/")
+            || path.contains("/banners/")
+            || path.contains("/interstitial/")
+            || path.contains("/interstitials/")
+            || path.contains("/overlay/")
+            || path.contains("/overlays/")
+            || path.contains("/popup/")
+            || path.contains("/pop-up/")
+            || path.contains("/search-ad/")
+            || path.contains("/search-ads/")
+            || path.contains("/home-ad/")
+            || path.contains("/home-ads/")
+            || path.contains("/takeover/")
+            || path.contains("/takeovers/")
+            || path.contains("/native-ad/")
+            || path.contains("/display-ad/")
+            || path.contains("/video-ad/")
+            || path.contains("/audio-ad/")
+            || path.contains("/rewarded/")
+            || path.contains("/offerwall/")
+            || path.contains("doubleclick")
+            || path.contains("googlesyndication")
+            || path.contains("adservice.google")
+            || path.contains("moatads")
+            || path.contains("scorecardresearch")
+            // Spotify spclient ad-specific paths
+            || (path.contains("spclient") && (
+                path.contains("ad-logic") || path.contains("adlogic") ||
+                path.contains("adserver") || path.contains("ad-server")
+            ))
     }
 
     // Additional session protection endpoints
