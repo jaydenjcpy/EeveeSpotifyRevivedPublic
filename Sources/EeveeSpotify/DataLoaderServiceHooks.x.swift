@@ -21,9 +21,41 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
     func shouldBlock(_ url: URL) -> Bool {
         let elapsed = Date().timeIntervalSince(tweakInitTime)
         
-        // Always block explicit session destroy/token delete or ad-related requests
-        if url.isDeleteToken || url.isSessionInvalidation || url.path.contains("session/purge") || url.path.contains("token/revoke") || url.isAdRelated {
+        // Always block: session destroy, token delete, and ALL ad-related requests
+        if url.isDeleteToken
+            || url.isSessionInvalidation
+            || url.path.contains("session/purge")
+            || url.path.contains("token/revoke")
+            || url.isAdRelated {
             return true
+        }
+
+        // Block Spotify's ad-logic and ad-delivery endpoints by path fragment
+        // (belt-and-suspenders: catches anything isAdRelated might miss)
+        let pathLower = url.path.lowercased()
+        let hostLower = (url.host ?? "").lowercased()
+        let adPathFragments: [String] = [
+            "/ads/", "/ad/", "/ad-logic/", "/adlogic/", "/ad_logic/",
+            "/dfp/", "/hpto/", "/marquee/", "/gam/", "/gam-ad/",
+            "/ad-slot/", "/ad-slots/", "/ad-inventory/", "/ad-targeting/",
+            "/ad-decision/", "/ad-request/", "/ad-event/", "/ad-impression/",
+            "/ad-click/", "/ad-tracking/", "/ad-measurement/",
+            "/sponsored/", "/promoted/", "/billboard/", "/takeover/",
+            "/interstitial/", "/native-ad/", "/display-ad/",
+            "/video-ad/", "/audio-ad/", "/rewarded/", "/offerwall/",
+        ]
+        for fragment in adPathFragments {
+            if pathLower.contains(fragment) { return true }
+        }
+
+        // Block known third-party ad network hosts entirely
+        let adHosts: [String] = [
+            "doubleclick.net", "googlesyndication.com", "googleadservices.com",
+            "adservice.google.com", "moatads.com", "scorecardresearch.com",
+            "omtrdc.net", "demdex.net", "ads.spotify.com", "adserver.spotify.com",
+        ]
+        for adHost in adHosts {
+            if hostLower == adHost || hostLower.hasSuffix("." + adHost) { return true }
         }
 
         // Only block these after startup (30s) to allow initial login/initialization
@@ -82,7 +114,8 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
             respondWithCustomData("{}".data(using: .utf8)!, task: task, session: session)
         } else if url.path.contains("bootstrap/v1/bootstrap") {
             respondWithCustomData("{}".data(using: .utf8)!, task: task, session: session)
-        } else if url.isAdRelated {
+        } else {
+            // All ad-related and unknown blocked URLs → empty response
             respondWithCustomData(Data(), task: task, session: session)
         }
         orig.URLSession(session, task: task, didCompleteWithError: nil)
@@ -106,7 +139,7 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
             return
         }
 
-        // Handle blocked endpoints (session protection)
+        // Handle blocked endpoints (session protection + ad blocking)
         if shouldBlock(url) {
             handleBlockedEndpoint(url, task: task, session: session)
             return
@@ -210,6 +243,12 @@ class SPTDataLoaderServiceHook: ClassHook<NSObject>, SpotifySessionDelegate {
         didReceiveResponse response: HTTPURLResponse,
         completionHandler handler: @escaping (URLSession.ResponseDisposition) -> Void
     ) {
+        // Block ad responses at the HTTP response level — cancel before data arrives
+        if let url = task.currentRequest?.url, shouldBlock(url) {
+            handler(.cancel)
+            return
+        }
+
         // Handle customize 304 — prevent free-account data leaking from URLSession cache
         if let url = task.currentRequest?.url, url.isCustomize, response.statusCode == 304 {
             if let cached = SPTDataLoaderServiceHook.cachedCustomizeData {
