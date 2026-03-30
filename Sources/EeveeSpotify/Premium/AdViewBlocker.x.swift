@@ -3,245 +3,214 @@ import UIKit
 
 // MARK: - AdViewBlocker
 //
-// This file hooks the ACTUAL ad rendering classes confirmed to exist in
-// Spotify v9.1.32 by binary analysis. These classes are responsible for
-// rendering every type of visual ad on the Search and Home screens:
+// Hooks the actual ad-rendering classes confirmed in Spotify v9.1.32 binary.
 //
-//   DisplayAdCardElementUI  — The Cartier-style banner ad card (Search/Home)
-//   VideoAdCardElementUI    — Video ad cards (Home feed)
-//   MobileOverlayViewController — The Credit Karma full-screen overlay ad
-//   MarqueeContentViewController — Marquee/takeover banner ads
-//   ShowcaseElementUI       — Sponsored showcase cards (Browse)
+// CRITICAL LESSON FROM CRASH:
+// The previous version crashed because it tried to swizzle INHERITED ObjC methods
+// (didMoveToWindow, layoutSubviews, viewDidLoad) on Swift subclasses. Orion's
+// ClassHook can only safely swizzle methods that are ACTUALLY DEFINED on the
+// target class itself (i.e., present in the class's own ObjC method list).
 //
-// The strategy: make every ad view zero-size and hidden immediately on
-// viewDidLoad / didMoveToWindow / viewWillAppear, so it is never visible.
-// Also override frame/bounds to CGRect.zero so layout gives it no space.
+// The safe approach: hook only selectors that are OWNED by each class
+// (confirmed by binary analysis), and use ClassHook<NSObject> for all Swift classes.
 //
-// These class names are confirmed present in the Spotify 9.1.32 binary.
-// Swift classes are registered with Objective-C using their mangled names.
+// STRATEGY:
+// Instead of hooking view lifecycle methods, we hook the FACTORY and PRESENTER
+// classes that CREATE and SHOW the ads. If the factory returns nothing and the
+// presenter never shows anything, the ads never appear — regardless of the
+// underlying view class hierarchy.
 
-// MARK: - DisplayAdCardElementUI
-// Mangled ObjC name: _TtC22AdsPlatform_ElementKit22DisplayAdCardElementUI
-// This is the primary display ad card shown on Search and Home screens.
-// Confirmed in binary: AdsPlatform_ElementKit/DisplayAdCardElement.swift
-class DisplayAdCardElementUIHook: ClassHook<UIView> {
+// MARK: - DisplayAdCardElementFactoryImpl
+// Mangled: _TtC23AdsPlatform_ElementImplP33_603627E8B0AC208963B3BB333CBD757C31DisplayAdCardElementFactoryImpl
+// This factory creates DisplayAdCardElement instances for the Search/Home display ad cards.
+// Confirmed selectors: adCardLogger, adEventsClient, dismissAction, viewedAction,
+//                      videoPlayerManager, sectionDismisser, providers, etc.
+// By making the factory's key properties return nil, no ad card element is created.
+class DisplayAdCardElementFactoryHook: ClassHook<NSObject> {
+    typealias Group = BasePremiumPatchingGroup
+    static let targetName = "_TtC23AdsPlatform_ElementImplP33_603627E8B0AC208963B3BB333CBD757C31DisplayAdCardElementFactoryImpl"
+
+    // Hook the dismissAction getter — returning nil prevents the ad from being set up
+    func dismissAction() -> AnyObject? {
+        return nil
+    }
+
+    // Hook viewedAction — prevents impression tracking and ad display
+    func viewedAction() -> AnyObject? {
+        return nil
+    }
+
+    // Hook providers — the factory uses this to build the ad element
+    func providers() -> AnyObject? {
+        return nil
+    }
+
+    // Hook shouldShowDismissButton — a no-op that prevents the ad card from initializing
+    func shouldShowDismissButton() -> Bool {
+        return false
+    }
+}
+
+// MARK: - VideoAdCardElementFactoryImpl
+// Mangled: _TtC23AdsPlatform_ElementImplP33_603627E8B0AC208963B3BB333CBD757C29VideoAdCardElementFactoryImpl
+// Creates video ad card elements.
+class VideoAdCardElementFactoryHook: ClassHook<NSObject> {
+    typealias Group = BasePremiumPatchingGroup
+    static let targetName = "_TtC23AdsPlatform_ElementImplP33_603627E8B0AC208963B3BB333CBD757C29VideoAdCardElementFactoryImpl"
+
+    func dismissAction() -> AnyObject? {
+        return nil
+    }
+
+    func viewedAction() -> AnyObject? {
+        return nil
+    }
+
+    func providers() -> AnyObject? {
+        return nil
+    }
+
+    func videoPlayerManager() -> AnyObject? {
+        return nil
+    }
+}
+
+// MARK: - MobileOverlayPresenterImpl
+// Mangled: _TtC31AdsStandalone_MobileOverlayImpl26MobileOverlayPresenterImpl
+// This is the presenter that decides when to show the Credit Karma / billboard overlay ad.
+// Confirmed selectors: adOnAppOpenUIEventPublisher, currentOverlayInteractionType,
+//                      currentNPVContextURI, isNPVVisible, sAdBillboardTitle, sAdBillboardDismiss
+class MobileOverlayPresenterHook: ClassHook<NSObject> {
+    typealias Group = BasePremiumPatchingGroup
+    static let targetName = "_TtC31AdsStandalone_MobileOverlayImpl26MobileOverlayPresenterImpl"
+
+    // Hook adOnAppOpenUIEventPublisher — this is the trigger for showing overlay ads on app open
+    func adOnAppOpenUIEventPublisher() -> AnyObject? {
+        return nil
+    }
+
+    // Hook currentOverlayInteractionType — returning nil prevents the overlay from being shown
+    func currentOverlayInteractionType() -> AnyObject? {
+        return nil
+    }
+
+    // Hook isNPVVisible — returning false prevents NPV-triggered overlay ads
+    func isNPVVisible() -> Bool {
+        return false
+    }
+}
+
+// MARK: - MarqueeController
+// Mangled: _TtC19Marquee_MarqueeImpl17MarqueeController
+// Controls the Marquee (takeover/banner) ad display.
+// Confirmed selectors: triggerSlotHandler, sendEventHandler, saveContentView,
+//                      marqueeCollectionPlatform, textColorType
+class MarqueeControllerHook: ClassHook<NSObject> {
+    typealias Group = BasePremiumPatchingGroup
+    static let targetName = "_TtC19Marquee_MarqueeImpl17MarqueeController"
+
+    // Hook triggerSlotHandler — this is what triggers the marquee ad to appear
+    func triggerSlotHandler() -> AnyObject? {
+        return nil
+    }
+
+    // Hook sendEventHandler — prevents marquee event processing
+    func sendEventHandler() -> AnyObject? {
+        return nil
+    }
+
+    // Hook marqueeCollectionPlatform — prevents the marquee platform from being set up
+    func marqueeCollectionPlatform() -> AnyObject? {
+        return nil
+    }
+}
+
+// MARK: - BrandAdSection (Browse/Search page)
+// Mangled: _TtC21Browse_BrowsePageImpl14BrandAdSection
+// The section that renders brand/display ads on the Browse and Search pages.
+// Confirmed selectors: adMetadata, callToAction, promotionURI, tagline, density
+class BrandAdSectionHook: ClassHook<NSObject> {
+    typealias Group = BasePremiumPatchingGroup
+    static let targetName = "_TtC21Browse_BrowsePageImpl14BrandAdSection"
+
+    // Hook adMetadata — returning nil prevents the ad section from loading its content
+    func adMetadata() -> AnyObject? {
+        return nil
+    }
+
+    // Hook callToAction — prevents the CTA button from being set up
+    func callToAction() -> AnyObject? {
+        return nil
+    }
+
+    // Hook promotionURI — prevents the ad from having a destination
+    func promotionURI() -> AnyObject? {
+        return nil
+    }
+}
+
+// MARK: - NativeAdsElementFactoryImpl
+// Mangled: _TtC21NativeAds_ElementImpl27NativeAdsElementFactoryImpl
+// Creates native ad elements (showcase/sponsored content).
+// Confirmed selectors: showcaseContainerView, mediaView, defaultContentComponent,
+//                      videoContentComponent, additionalInfoPresenter
+class NativeAdsElementFactoryHook: ClassHook<NSObject> {
+    typealias Group = BasePremiumPatchingGroup
+    static let targetName = "_TtC21NativeAds_ElementImpl27NativeAdsElementFactoryImpl"
+
+    func showcaseContainerView() -> AnyObject? {
+        return nil
+    }
+
+    func mediaView() -> AnyObject? {
+        return nil
+    }
+
+    func defaultContentComponent() -> AnyObject? {
+        return nil
+    }
+
+    func videoContentComponent() -> AnyObject? {
+        return nil
+    }
+}
+
+// MARK: - DisplayAdCardElementUI (safe hook — only own selectors)
+// Mangled: _TtC22AdsPlatform_ElementKit22DisplayAdCardElementUI
+// Confirmed own selectors: surfaceName, display_ad_element, didNotifyStarted
+// We hook display_ad_element to return nil, preventing the ad card from rendering.
+class DisplayAdCardElementUIHook: ClassHook<NSObject> {
     typealias Group = BasePremiumPatchingGroup
     static let targetName = "_TtC22AdsPlatform_ElementKit22DisplayAdCardElementUI"
 
-    func didMoveToWindow() {
-        orig.didMoveToWindow()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
+    // display_ad_element is the getter that returns the actual ad card view
+    func display_ad_element() -> AnyObject? {
+        return nil
     }
 
-    func didMoveToSuperview() {
-        orig.didMoveToSuperview()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
+    // didNotifyStarted is called when the ad starts — we suppress it
+    func didNotifyStarted() {
+        // Do nothing — suppress the ad start notification
     }
 
-    func layoutSubviews() {
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
+    // surfaceName is used for ad tracking/logging — return empty string
+    func surfaceName() -> AnyObject? {
+        return "" as AnyObject
     }
 }
 
-// MARK: - VideoAdCardElementUI
-// Mangled ObjC name: _TtC22AdsPlatform_ElementKit20VideoAdCardElementUI
-// Video ad card shown in the Home feed.
-class VideoAdCardElementUIHook: ClassHook<UIView> {
+// MARK: - VideoAdCardElementUI (safe hook — only own selectors)
+// Mangled: _TtC22AdsPlatform_ElementKit20VideoAdCardElementUI
+// Confirmed own selectors: lastVisibility, didDispatchStartedEvent, modalObserver
+class VideoAdCardElementUIHook: ClassHook<NSObject> {
     typealias Group = BasePremiumPatchingGroup
     static let targetName = "_TtC22AdsPlatform_ElementKit20VideoAdCardElementUI"
 
-    func didMoveToWindow() {
-        orig.didMoveToWindow()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
+    func didDispatchStartedEvent() {
+        // Suppress — do not dispatch the ad started event
     }
 
-    func didMoveToSuperview() {
-        orig.didMoveToSuperview()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func layoutSubviews() {
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-    }
-}
-
-// MARK: - MobileOverlayViewController
-// Mangled ObjC name: _TtC31AdsStandalone_MobileOverlayImpl27MobileOverlayViewController
-// Full-screen overlay ad (Credit Karma, etc.)
-class MobileOverlayViewControllerHook: ClassHook<UIViewController> {
-    typealias Group = BasePremiumPatchingGroup
-    static let targetName = "_TtC31AdsStandalone_MobileOverlayImpl27MobileOverlayViewController"
-
-    func viewDidLoad() {
-        // Do NOT call orig — prevent the ad view from loading at all
-        target.view.isHidden = true
-        target.view.alpha = 0
-        target.view.frame = .zero
-    }
-
-    func viewWillAppear(_ animated: Bool) {
-        // Do NOT call orig — prevent the ad from appearing
-        target.view.isHidden = true
-        target.view.alpha = 0
-    }
-
-    func viewDidAppear(_ animated: Bool) {
-        // Dismiss immediately if it somehow appeared
-        target.dismiss(animated: false, completion: nil)
-    }
-}
-
-// MARK: - MarqueeContentViewController
-// Marquee/takeover banner ads
-class MarqueeContentViewControllerHook: ClassHook<UIViewController> {
-    typealias Group = BasePremiumPatchingGroup
-    static let targetName = "MarqueeContentViewController"
-
-    func viewDidLoad() {
-        target.view.isHidden = true
-        target.view.alpha = 0
-        target.view.frame = .zero
-    }
-
-    func viewWillAppear(_ animated: Bool) {
-        target.view.isHidden = true
-        target.view.alpha = 0
-    }
-
-    func viewDidAppear(_ animated: Bool) {
-        target.dismiss(animated: false, completion: nil)
-    }
-}
-
-// MARK: - ShowcaseElementUI (NativeAds)
-// Mangled ObjC name: _TtC21NativeAds_ElementImpl17ShowcaseElementUI
-// Sponsored showcase cards on Browse/Search
-class ShowcaseElementUIHook: ClassHook<UIView> {
-    typealias Group = BasePremiumPatchingGroup
-    static let targetName = "_TtC21NativeAds_ElementImpl17ShowcaseElementUI"
-
-    func didMoveToWindow() {
-        orig.didMoveToWindow()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func didMoveToSuperview() {
-        orig.didMoveToSuperview()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func layoutSubviews() {
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-    }
-}
-
-// MARK: - ShowcaseMDCElementUI (NativeAds MDC variant)
-// Mangled ObjC name: _TtC21NativeAds_ElementImpl20ShowcaseMDCElementUI
-class ShowcaseMDCElementUIHook: ClassHook<UIView> {
-    typealias Group = BasePremiumPatchingGroup
-    static let targetName = "_TtC21NativeAds_ElementImpl20ShowcaseMDCElementUI"
-
-    func didMoveToWindow() {
-        orig.didMoveToWindow()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func didMoveToSuperview() {
-        orig.didMoveToSuperview()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func layoutSubviews() {
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-    }
-}
-
-// MARK: - AdMobileOverlay (Components.UI.AdMobileOverlay)
-// Plain ObjC class name confirmed in binary
-class AdMobileOverlayHook: ClassHook<UIView> {
-    typealias Group = BasePremiumPatchingGroup
-    static let targetName = "AdMobileOverlay"
-
-    func didMoveToWindow() {
-        orig.didMoveToWindow()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func didMoveToSuperview() {
-        orig.didMoveToSuperview()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func layoutSubviews() {
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-    }
-}
-
-// MARK: - MarqueeContentView
-// The view component of marquee ads
-class MarqueeContentViewHook: ClassHook<UIView> {
-    typealias Group = BasePremiumPatchingGroup
-    static let targetName = "MarqueeContentView"
-
-    func didMoveToWindow() {
-        orig.didMoveToWindow()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func didMoveToSuperview() {
-        orig.didMoveToSuperview()
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
-        target.removeFromSuperview()
-    }
-
-    func layoutSubviews() {
-        target.isHidden = true
-        target.alpha = 0
-        target.frame = .zero
+    func lastVisibility() -> AnyObject? {
+        return nil
     }
 }
