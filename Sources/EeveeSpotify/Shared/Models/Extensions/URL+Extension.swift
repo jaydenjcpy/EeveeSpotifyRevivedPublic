@@ -68,8 +68,7 @@ extension URL {
         let host = (self.host ?? "").lowercased()
         
         // Block the "Ad on App Open" home-screen banner (Pepsi, etc.)
-        // Exact spclient path: /ads/ad-on-app-open
-        if path.contains("/ads/ad-on-app-open") {
+        if path.contains("/ad-on-app-open") || path.contains("/ads/ad-on-app-open") {
             return true
         }
         
