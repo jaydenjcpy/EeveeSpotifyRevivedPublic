@@ -194,9 +194,9 @@ private let propertyReplacements = [
     // ─────────────────────────────────────────────────────────────────────
     // Ads base infrastructure
     // ─────────────────────────────────────────────────────────────────────
-    EeveePropertyReplacement(scope: "ios-feature-adsbase", name: "enable_ads_connect_state_observer", modification: .setBool(false)),
-    EeveePropertyReplacement(scope: "ios-feature-adsbase", name: "enable_minimal_preroll_management", modification: .setBool(false)),
-    EeveePropertyReplacement(scope: "ios-feature-adsbase", name: "enable_swift_ads_base_movement_logger", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_ads_connect_state_observer", scope: "ios-feature-adsbase", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_minimal_preroll_management", scope: "ios-feature-adsbase", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_swift_ads_base_movement_logger", scope: "ios-feature-adsbase", modification: .setBool(false)),
 
     // ─────────────────────────────────────────────────────────────────────
     // Ads Swift context tracking
@@ -206,14 +206,14 @@ private let propertyReplacements = [
     // ─────────────────────────────────────────────────────────────────────
     // Now Playing video ads
     // ─────────────────────────────────────────────────────────────────────
-    EeveePropertyReplacement(scope: "ios-feature-adsnowplayingui", name: "embedded_npv_video_show_with_canvas", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "embedded_npv_video_show_with_canvas", scope: "ios-feature-adsnowplayingui", modification: .setBool(false)),
 
     // ─────────────────────────────────────────────────────────────────────
     // Sponsored context (sponsored playlists in Now Playing bar)
     // ─────────────────────────────────────────────────────────────────────
-    EeveePropertyReplacement(scope: "ios-feature-adssponsoredcontext", name: "sponsored_context_mismatch_aderror_enabled", modification: .setBool(false)),
-    EeveePropertyReplacement(scope: "ios-feature-adssponsoredcontext", name: "sponsored_playlist_v2_enabled", modification: .setBool(false)),
-    EeveePropertyReplacement(scope: "ios-feature-adssponsoredcontextnpbattachment", name: "sponsored_npb_slot_fetch_enabled", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "sponsored_context_mismatch_aderror_enabled", scope: "ios-feature-adssponsoredcontext", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "sponsored_playlist_v2_enabled", scope: "ios-feature-adssponsoredcontext", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "sponsored_npb_slot_fetch_enabled", scope: "ios-feature-adssponsoredcontextnpbattachment", modification: .setBool(false)),
 
     // ─────────────────────────────────────────────────────────────────────
     // Ads identity tracking (SKAdNetwork / attribution)
