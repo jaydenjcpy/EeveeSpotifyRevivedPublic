@@ -169,9 +169,61 @@ private let propertyReplacements = [
     EeveePropertyReplacement(name: "enable_sponsored_podcast_sponsored_ad", modification: .setBool(false)),
     EeveePropertyReplacement(name: "enable_sponsored_podcast_sponsored_ads", modification: .setBool(false)),
     
-    // Additional Ad & Pop-up Blocking
+    // ─────────────────────────────────────────────────────────────────────
+    // Ad on App Open — the "Advertisement" home-screen banner (Pepsi, etc.)
+    // Scope: ios-feature-adonappopen — MUST use scope: to match correctly
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-adonappopen", modification: .remove),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Marquee — full-screen artist/brand ad overlay
+    // Scope: ios-feature-marquee — MUST use scope: to match correctly
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-marquee", modification: .remove),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Leave Behind ads — shown when leaving Now Playing
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-leavebehindadsbase", modification: .remove),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // In-stream / audio / video stream ads
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-instreamads", modification: .remove),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Ads base infrastructure
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-adsbase", name: "enable_ads_connect_state_observer", modification: .setBool(false)),
+    EeveePropertyReplacement(scope: "ios-feature-adsbase", name: "enable_minimal_preroll_management", modification: .setBool(false)),
+    EeveePropertyReplacement(scope: "ios-feature-adsbase", name: "enable_swift_ads_base_movement_logger", modification: .setBool(false)),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Ads Swift context tracking
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-adsswift", modification: .remove),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Now Playing video ads
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-adsnowplayingui", name: "embedded_npv_video_show_with_canvas", modification: .setBool(false)),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Sponsored context (sponsored playlists in Now Playing bar)
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-adssponsoredcontext", name: "sponsored_context_mismatch_aderror_enabled", modification: .setBool(false)),
+    EeveePropertyReplacement(scope: "ios-feature-adssponsoredcontext", name: "sponsored_playlist_v2_enabled", modification: .setBool(false)),
+    EeveePropertyReplacement(scope: "ios-feature-adssponsoredcontextnpbattachment", name: "sponsored_npb_slot_fetch_enabled", modification: .setBool(false)),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Ads identity tracking (SKAdNetwork / attribution)
+    // ─────────────────────────────────────────────────────────────────────
+    EeveePropertyReplacement(scope: "ios-feature-adsidentitytracking", modification: .remove),
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Additional legacy / non-scoped ad flags
+    // ─────────────────────────────────────────────────────────────────────
     EeveePropertyReplacement(name: "enable_popups", modification: .setBool(false)),
-    EeveePropertyReplacement(name: "enable_marquee_swift", modification: .setBool(false)),
     EeveePropertyReplacement(name: "enable_leave_behind_ads_card_element", modification: .setBool(false)),
     EeveePropertyReplacement(name: "music_npv_leavebehinds_enabled", modification: .setBool(false)),
     EeveePropertyReplacement(name: "enable_ads_on_podcast", modification: .setBool(false)),
@@ -187,11 +239,6 @@ private let propertyReplacements = [
     EeveePropertyReplacement(name: "disable_suggested_tracks_upsell", modification: .setBool(true)),
     EeveePropertyReplacement(name: "is_enabled_pt2", modification: .setBool(false)),
     EeveePropertyReplacement(name: "show_skip_button_during_skippable_ads", modification: .setBool(true)),
-    EeveePropertyReplacement(name: "enable_ads_connect_state_observer", modification: .setBool(false)),
-    EeveePropertyReplacement(name: "enable_minimal_preroll_management", modification: .setBool(false)),
-    EeveePropertyReplacement(name: "enable_swift_ads_base_movement_logger", modification: .setBool(false)),
-    EeveePropertyReplacement(name: "embedded_npv_video_show_with_canvas", modification: .setBool(false)),
-    EeveePropertyReplacement(name: "enable_verbose_logging", modification: .setBool(false)),
     EeveePropertyReplacement(name: "sponsored_playlist_v2_header_dismissible", modification: .setBool(true)),
     EeveePropertyReplacement(name: "use_mock_sponsorship_endpoint", modification: .setBool(false)),
     EeveePropertyReplacement(name: "enable_popup", modification: .setBool(false)),
