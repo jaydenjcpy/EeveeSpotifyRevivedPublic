@@ -1,135 +1,160 @@
 import Orion
 import Foundation
 
+// HUB JSON component structure (from open-source HubFramework):
+// Each component dict has:
+//   "component": {"namespace": "mobile", "name": "display-ad-card"}
+//     — OR in some versions just a string "mobile:display-ad-card"
+//   "id": "some-identifier"
+//   "metadata": {...}
+//   "logging": {...}
+//   "body": [...] (child components)
+//   "header": {...}
+//   "overlays": [...]
+//   "sections": [...]
+//
+// Known ad component identifiers found in Spotify 9.1.x binary:
+//   mobile-display-ad-card          (namespace: mobile, name: display-ad-card)
+//   mobile-ads-display-ad-element   (namespace: mobile-ads, name: display-ad-element)
+//   mobile-ads-fullbleed-display-card
+//   mobile-ads-embedded-npv-display-card
+//   native-ad-home-shelf
+//   com.spotify.service.marquee
+
 class HubsAdBlocker: ClassHook<NSObject> {
     typealias Group = BasePremiumPatchingGroup
     static let targetName: String = "HUBViewModelBuilderImplementation"
-    
-    // MARK: - Ad & Upsell Filter
-    
-    private func shouldStripComponent(_ component: [String: Any]) -> Bool {
-        let adKeywords = [
-            "ad", "sponsored", "upsell", "campaign", "promoted", "premium-upsell", 
-            "merch", "ticket", "billboard", "banner", "interstitial", "overlay", "popup",
-            "marquee", "leavebehind", "displayad", "fullbleed", "leaderboard", "advertisement",
-            "sponsor", "promo"
-        ]
-        
-        // Check ID
+
+    // Ad-related keywords matched against component namespace, name, id, type, and metadata keys
+    private static let adKeywords: [String] = [
+        "ad", "ads", "sponsored", "upsell", "campaign", "promoted",
+        "premium-upsell", "merch", "ticket", "billboard", "banner",
+        "interstitial", "overlay", "marquee", "leavebehind",
+        "leave-behind", "displayad", "display-ad", "fullbleed", "full-bleed",
+        "leaderboard", "advertisement", "sponsor", "promo", "native-ad",
+        "mobile-ads", "on-surface", "onsurface"
+    ]
+
+    // Returns true if the given string contains any ad keyword
+    private static func containsAdKeyword(_ str: String) -> Bool {
+        let lower = str.lowercased()
+        for kw in adKeywords {
+            if lower.contains(kw) { return true }
+        }
+        return false
+    }
+
+    // Returns true if the component dictionary represents an ad
+    private func isAdComponent(_ component: [String: Any]) -> Bool {
+        // 1. Check "component" field
+        //    In HUB JSON this is a dict: {"namespace": "mobile", "name": "display-ad-card"}
+        if let componentDict = component["component"] as? [String: Any] {
+            let ns = componentDict["namespace"] as? String ?? ""
+            let name = componentDict["name"] as? String ?? ""
+            if HubsAdBlocker.containsAdKeyword(ns) { return true }
+            if HubsAdBlocker.containsAdKeyword(name) { return true }
+            if HubsAdBlocker.containsAdKeyword("\(ns):\(name)") { return true }
+        }
+        // Also handle plain string format (e.g. "mobile:display-ad-card")
+        if let componentStr = component["component"] as? String {
+            if HubsAdBlocker.containsAdKeyword(componentStr) { return true }
+        }
+
+        // 2. Check "id" field
         if let id = component["id"] as? String {
-            for keyword in adKeywords {
-                if id.localizedCaseInsensitiveContains(keyword) {
-                    return true
-                }
-            }
+            if HubsAdBlocker.containsAdKeyword(id) { return true }
         }
-        
-        // Check Component Type
-        if let componentType = component["component"] as? String {
-            for keyword in adKeywords {
-                if componentType.localizedCaseInsensitiveContains(keyword) {
-                    return true
-                }
-            }
+
+        // 3. Check "type" field
+        if let type_ = component["type"] as? String {
+            if HubsAdBlocker.containsAdKeyword(type_) { return true }
         }
-        
-        // Check Type
-        if let type = component["type"] as? String {
-            for keyword in adKeywords {
-                if type.localizedCaseInsensitiveContains(keyword) {
-                    return true
-                }
-            }
-        }
-        
-        // Check Metadata
+
+        // 4. Check "metadata" dict — look for ad flags and ad-related keys
         if let metadata = component["metadata"] as? [String: Any] {
-            // Check for explicit ad flags in metadata
-            if metadata["ad"] as? Bool == true || metadata["is_ad"] as? Bool == true || metadata["is_sponsored"] as? Bool == true {
-                return true
-            }
-            
-            // Check for common ad/upsell keys in metadata dictionary
-            let metadataKeys = metadata.keys.map { $0.lowercased() }
-            if metadataKeys.contains(where: { key in
-                adKeywords.contains(where: { key.contains($0) })
-            }) {
-                return true
+            if metadata["ad"] as? Bool == true { return true }
+            if metadata["is_ad"] as? Bool == true { return true }
+            if metadata["is_sponsored"] as? Bool == true { return true }
+            for key in metadata.keys {
+                if HubsAdBlocker.containsAdKeyword(key) { return true }
             }
         }
-        
-        // Check Logging Metadata (often contains ad identifiers)
+
+        // 5. Check "logging" dict keys and type
         if let logging = component["logging"] as? [String: Any] {
-            if let type = logging["type"] as? String {
-                let lowerType = type.lowercased()
-                if adKeywords.contains(where: { lowerType.contains($0) }) {
-                    return true
-                }
+            if let logType = logging["type"] as? String {
+                if HubsAdBlocker.containsAdKeyword(logType) { return true }
+            }
+            for key in logging.keys {
+                if HubsAdBlocker.containsAdKeyword(key) { return true }
             }
         }
-        
-        // Check Custom Data
+
+        // 6. Check "custom" dict keys
         if let custom = component["custom"] as? [String: Any] {
-            let customKeys = custom.keys.map { $0.lowercased() }
-            if customKeys.contains(where: { key in
-                adKeywords.contains(where: { key.contains($0) })
-            }) {
-                return true
+            for key in custom.keys {
+                if HubsAdBlocker.containsAdKeyword(key) { return true }
             }
         }
 
         return false
     }
 
+    // Recursively filter ad components from an array
     private func filterComponents(_ components: [[String: Any]]) -> [[String: Any]] {
-        var filtered = [[String: Any]]()
-        
+        var result = [[String: Any]]()
         for var component in components {
-            if shouldStripComponent(component) {
+            if isAdComponent(component) {
                 continue
             }
-            
-            // Recursively filter children
+            // Recursively filter nested arrays
             if let children = component["children"] as? [[String: Any]] {
                 component["children"] = filterComponents(children)
             }
-            
-            filtered.append(component)
+            if let rows = component["rows"] as? [[String: Any]] {
+                component["rows"] = filterComponents(rows)
+            }
+            if let body = component["body"] as? [[String: Any]] {
+                component["body"] = filterComponents(body)
+            }
+            result.append(component)
         }
-        
-        return filtered
+        return result
     }
 
-    // MARK: - Hook Implementation
-
     func addJSONDictionary(_ dictionary: NSDictionary?) {
-        guard let dictionary = dictionary as? [String: Any] else {
+        guard var mutableDict = dictionary as? [String: Any] else {
             orig.addJSONDictionary(dictionary)
             return
         }
-        
-        // First apply original mutations (like Liked Songs)
-        var mutableDictionary = mutateHubsJSON(dictionary)
-        
-        // Filter 'body' components (main page content)
-        if let body = mutableDictionary["body"] as? [[String: Any]] {
-            mutableDictionary["body"] = filterComponents(body)
-        }
-        
-        // Filter 'header' components (often contains banners/upsells)
-        if let header = mutableDictionary["header"] as? [String: Any] {
-            if let children = header["children"] as? [[String: Any]] {
-                var mutableHeader = header
-                mutableHeader["children"] = filterComponents(children)
-                mutableDictionary["header"] = mutableHeader
-            }
-        }
-        
-        // Filter 'overlays' (popups/tooltips)
-        if let overlays = mutableDictionary["overlays"] as? [[String: Any]] {
-            mutableDictionary["overlays"] = filterComponents(overlays)
+
+        // Filter top-level "body" array
+        if let body = mutableDict["body"] as? [[String: Any]] {
+            mutableDict["body"] = filterComponents(body)
         }
 
-        orig.addJSONDictionary(mutableDictionary as NSDictionary)
+        // Filter "header" component
+        if var header = mutableDict["header"] as? [String: Any] {
+            if isAdComponent(header) {
+                mutableDict.removeValue(forKey: "header")
+            } else {
+                if let children = header["children"] as? [[String: Any]] {
+                    header["children"] = filterComponents(children)
+                }
+                mutableDict["header"] = header
+            }
+        }
+
+        // Filter "overlays" array
+        if let overlays = mutableDict["overlays"] as? [[String: Any]] {
+            mutableDict["overlays"] = filterComponents(overlays)
+        }
+
+        // Filter "sections" array (used in some page types)
+        if let sections = mutableDict["sections"] as? [[String: Any]] {
+            mutableDict["sections"] = filterComponents(sections)
+        }
+
+        orig.addJSONDictionary(mutableDict as NSDictionary)
     }
 }
