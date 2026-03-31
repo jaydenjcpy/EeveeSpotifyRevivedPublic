@@ -171,20 +171,18 @@ private let propertyReplacements = [
     
     // ─────────────────────────────────────────────────────────────────────
     // Ad on App Open — the "Advertisement" home-screen banner (Pepsi, etc.)
-    // Scope: ios-feature-adonappopen — MUST use scope: to match correctly
     // ─────────────────────────────────────────────────────────────────────
-    EeveePropertyReplacement(scope: "ios-feature-adonappopen", modification: .remove),
+    EeveePropertyReplacement(scope: "ios-ad-on-app-open", modification: .remove),
 
     // ─────────────────────────────────────────────────────────────────────
     // Marquee — full-screen artist/brand ad overlay
-    // Scope: ios-feature-marquee — MUST use scope: to match correctly
     // ─────────────────────────────────────────────────────────────────────
-    EeveePropertyReplacement(scope: "ios-feature-marquee", modification: .remove),
+    EeveePropertyReplacement(scope: "marquee", modification: .remove),
 
     // ─────────────────────────────────────────────────────────────────────
     // Leave Behind ads — shown when leaving Now Playing
     // ─────────────────────────────────────────────────────────────────────
-    EeveePropertyReplacement(scope: "ios-feature-leavebehindadsbase", modification: .remove),
+    EeveePropertyReplacement(scope: "leavebehindadsbase", modification: .remove),
 
     // ─────────────────────────────────────────────────────────────────────
     // In-stream / audio / video stream ads
