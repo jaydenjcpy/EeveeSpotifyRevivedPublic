@@ -65,33 +65,57 @@ extension URL {
     
     var isAdRelated: Bool {
         let path = self.path.lowercased()
-        return path.contains("/ads/") || 
-               path.contains("/ad-logic/") ||
-               path.contains("/ad-slot/") ||
-               path.contains("/ad-inventory/") ||
-               path.contains("/sponsored/") ||
-               path.contains("/promoted/") ||
-               path.contains("/upsell/") ||
-               path.contains("/campaign/") ||
-               path.contains("/billboard/") ||
-               path.contains("/banner/") ||
-               path.contains("/interstitial/") ||
-               path.contains("/overlay/") ||
-               path.contains("/popup/") ||
-               path.contains("/pop-up/") ||
-               path.contains("/search-ad/") ||
-               path.contains("/home-ad/") ||
-               path.contains("/marquee/") ||
-               path.contains("/leavebehind/") ||
-               path.contains("/display-ad/") ||
-               path.contains("/fullbleed/") ||
-               path.contains("/leaderboard/") ||
-               path.contains("doubleclick") ||
-               path.contains("googlesyndication") ||
-               path.contains("ad.spotify.com") ||
-               path.contains("ads.spotify.com") ||
-               path.contains("spclient.wg.spotify.com/ads/") ||
-               path.contains("spclient.wg.spotify.com/ad-logic/")
+        let host = (self.host ?? "").lowercased()
+        
+        // Block the "Ad on App Open" home-screen banner (Pepsi, etc.)
+        // Exact spclient path: /ads/ad-on-app-open
+        if path.contains("/ads/ad-on-app-open") {
+            return true
+        }
+        
+        // Block all other spclient /ads/* endpoints
+        if path.contains("/ads/") {
+            return true
+        }
+        
+        // Block ad-logic (Marquee, in-stream ads)
+        if path.contains("/ad-logic/") {
+            return true
+        }
+        
+        // Block other known ad paths
+        if path.contains("/ad-slot/") ||
+           path.contains("/ad-inventory/") ||
+           path.contains("/ad-on-app-open") ||
+           path.contains("/sponsored/") ||
+           path.contains("/promoted/") ||
+           path.contains("/upsell/") ||
+           path.contains("/campaign/") ||
+           path.contains("/billboard/") ||
+           path.contains("/banner/") ||
+           path.contains("/interstitial/") ||
+           path.contains("/overlay/") ||
+           path.contains("/popup/") ||
+           path.contains("/pop-up/") ||
+           path.contains("/search-ad/") ||
+           path.contains("/home-ad/") ||
+           path.contains("/marquee/") ||
+           path.contains("/leavebehind/") ||
+           path.contains("/display-ad/") ||
+           path.contains("/fullbleed/") ||
+           path.contains("/leaderboard/") {
+            return true
+        }
+        
+        // Block known ad hostnames
+        if host.contains("doubleclick") ||
+           host.contains("googlesyndication") ||
+           host == "ad.spotify.com" ||
+           host == "ads.spotify.com" {
+            return true
+        }
+        
+        return false
     }
 
     // Additional session protection endpoints
