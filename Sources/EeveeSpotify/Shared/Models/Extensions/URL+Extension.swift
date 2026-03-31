@@ -81,8 +81,17 @@ extension URL {
                path.contains("/pop-up/") ||
                path.contains("/search-ad/") ||
                path.contains("/home-ad/") ||
+               path.contains("/marquee/") ||
+               path.contains("/leavebehind/") ||
+               path.contains("/display-ad/") ||
+               path.contains("/fullbleed/") ||
+               path.contains("/leaderboard/") ||
                path.contains("doubleclick") ||
-               path.contains("googlesyndication")
+               path.contains("googlesyndication") ||
+               path.contains("ad.spotify.com") ||
+               path.contains("ads.spotify.com") ||
+               path.contains("spclient.wg.spotify.com/ads/") ||
+               path.contains("spclient.wg.spotify.com/ad-logic/")
     }
 
     // Additional session protection endpoints
