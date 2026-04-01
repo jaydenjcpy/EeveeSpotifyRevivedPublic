@@ -261,6 +261,14 @@ private let propertyReplacements = [
     EeveePropertyReplacement(name: "enable_home_page_ads", modification: .setBool(false)),
     EeveePropertyReplacement(name: "enable_billboard", modification: .setBool(false)),
     EeveePropertyReplacement(name: "enable_billboards", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_audio_ads_player", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_display_ads_player", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_video_ads_player", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_audio_ads_player_v2", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_display_ads_player_v2", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_video_ads_player_v2", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_sponsored_search_results_v2", modification: .setBool(false)),
+    EeveePropertyReplacement(name: "enable_sponsored_home_results_v2", modification: .setBool(false)),
 
     // 😡😡😡 spotify, stop changing the scroll logic
     EeveePropertyReplacement(name: "should_nova_scroll_use_scrollsita", modification: .remove)
@@ -298,6 +306,18 @@ private func modifyAttributes(_ attributes: inout [String: AccountAttribute]) {
     
     attributes["ads"] = AccountAttribute.with {
         $0.boolValue = false
+    }
+    
+    attributes["ab-ad-player-targeting"] = AccountAttribute.with {
+        $0.stringValue = "0"
+    }
+    
+    attributes["allow-advertising-id-transmission"] = AccountAttribute.with {
+        $0.boolValue = false
+    }
+    
+    attributes["restrict-advertising-id-transmission"] = AccountAttribute.with {
+        $0.boolValue = true
     }
 
     attributes["can_use_superbird"] = AccountAttribute.with {

@@ -106,7 +106,18 @@ extension URL {
            path.contains("/ad-card/") ||
            path.contains("/sponsored-content/") ||
            path.contains("/sponsored-ad/") ||
-           path.contains("/native-ad/") {
+           path.contains("/native-ad/") ||
+           path.contains("/sponsored-shelf/") ||
+           path.contains("/sponsored-row/") ||
+           path.contains("/ad-shelf/") ||
+           path.contains("/ad-row/") ||
+           path.contains("/sponsored-item/") ||
+           path.contains("/ad-item/") ||
+           path.contains("/merchandising/") ||
+           path.contains("/upgrade-component/") ||
+           path.contains("/marketing/") ||
+           path.contains("/home-ads/") ||
+           path.contains("/search-ads/") {
             return true
         }
         
