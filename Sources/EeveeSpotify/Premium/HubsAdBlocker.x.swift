@@ -21,8 +21,10 @@ import Foundation
 //   native-ad-home-shelf
 //   com.spotify.service.marquee
 
+struct AdBlockerGroup: HookGroup { }
+
 class HubsAdBlocker: ClassHook<NSObject> {
-    typealias Group = BasePremiumPatchingGroup
+    typealias Group = AdBlockerGroup
     static let targetName: String = "HUBViewModelBuilderImplementation"
 
     // Ad-related keywords matched against component namespace, name, id, type, and metadata keys
