@@ -144,6 +144,9 @@ struct EeveeSpotify: Tweak {
         // For 9.1.x, activate premium patching and lyrics
         if EeveeSpotify.hookTarget == .v91 {
             
+            // Always activate ad blocking regardless of patch type
+            AdBlockerGroup().activate()
+            
             // Premium patching
             if UserDefaults.patchType.isPatching {
                 BasePremiumPatchingGroup().activate()
@@ -171,6 +174,9 @@ struct EeveeSpotify: Tweak {
         if UserDefaults.darkPopUps {
             DarkPopUps().activate()
         }
+        
+        // Always activate ad blocking regardless of patch type
+        AdBlockerGroup().activate()
         
         if UserDefaults.patchType.isPatching {
             activatePremiumPatchingGroup()
