@@ -391,6 +391,11 @@ private func modifyAttributes(_ attributes: inout [String: AccountAttribute]) {
     attributes.removeValue(forKey: "at-signal")
     attributes.removeValue(forKey: "feature-set-id-masked")
     attributes.removeValue(forKey: "strider-key")
+    attributes.removeValue(forKey: "is-eligible-for-trial")
+    attributes.removeValue(forKey: "is-eligible-for-upsell")
+    attributes.removeValue(forKey: "upsell-state")
+    attributes.removeValue(forKey: "ad-session-persistence")
+    attributes.removeValue(forKey: "ad-formats-preroll-video")
     
     for i in 1...100 {
         attributes.removeValue(forKey: "is-premium-eligible-v\(i)")

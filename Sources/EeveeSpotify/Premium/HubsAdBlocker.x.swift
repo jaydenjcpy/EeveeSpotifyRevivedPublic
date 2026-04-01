@@ -34,7 +34,10 @@ class HubsAdBlocker: ClassHook<NSObject> {
         "interstitial", "overlay", "marquee", "leavebehind",
         "leave-behind", "displayad", "display-ad", "fullbleed", "full-bleed",
         "leaderboard", "advertisement", "sponsor", "promo", "native-ad",
-        "mobile-ads", "on-surface", "onsurface"
+        "mobile-ads", "on-surface", "onsurface", "search-ad", "home-ad",
+        "sponsored-content", "sponsored-ad", "display-ad", "ad-card",
+        "native-ad-home-shelf", "sponsored-shelf", "sponsored-row",
+        "ad-shelf", "ad-row", "sponsored-item", "ad-item"
     ]
 
     // Returns true if the given string contains any ad keyword
@@ -97,6 +100,31 @@ class HubsAdBlocker: ClassHook<NSObject> {
             for key in custom.keys {
                 if HubsAdBlocker.containsAdKeyword(key) { return true }
             }
+        }
+
+        // 7. Check "text" and "title" fields for "Advertisement" label
+        if let text = component["text"] as? [String: Any] {
+            for value in text.values {
+                if let str = value as? String, HubsAdBlocker.containsAdKeyword(str) { return true }
+                if let dict = value as? [String: Any] {
+                    for v in dict.values {
+                        if let s = v as? String, HubsAdBlocker.containsAdKeyword(s) { return true }
+                    }
+                }
+            }
+        }
+        
+        if let title = component["title"] as? String {
+            if HubsAdBlocker.containsAdKeyword(title) { return true }
+        }
+
+        // 8. Check "subtitle" and "header" fields
+        if let subtitle = component["subtitle"] as? String {
+            if HubsAdBlocker.containsAdKeyword(subtitle) { return true }
+        }
+
+        if let header = component["header"] as? String {
+            if HubsAdBlocker.containsAdKeyword(header) { return true }
         }
 
         return false

@@ -102,7 +102,11 @@ extension URL {
            path.contains("/leavebehind/") ||
            path.contains("/display-ad/") ||
            path.contains("/fullbleed/") ||
-           path.contains("/leaderboard/") {
+           path.contains("/leaderboard/") ||
+           path.contains("/ad-card/") ||
+           path.contains("/sponsored-content/") ||
+           path.contains("/sponsored-ad/") ||
+           path.contains("/native-ad/") {
             return true
         }
         
