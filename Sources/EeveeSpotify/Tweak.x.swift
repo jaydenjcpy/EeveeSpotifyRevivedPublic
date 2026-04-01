@@ -51,6 +51,8 @@ struct IOS14And15PremiumPatchingGroup: HookGroup { }
 struct V91PremiumPatchingGroup: HookGroup { } // For Spotify 9.1.x versions
 struct LatestPremiumPatchingGroup: HookGroup { }
 
+struct DACAdBlockerGroup: HookGroup { }
+
 func activatePremiumPatchingGroup() {
     BasePremiumPatchingGroup().activate()
     
@@ -146,7 +148,6 @@ struct EeveeSpotify: Tweak {
             
             // Always activate ad blocking regardless of patch type
             AdBlockerGroup().activate()
-            DACAdBlockerGroup().activate()
             
             // Premium patching
             if UserDefaults.patchType.isPatching {
@@ -178,7 +179,6 @@ struct EeveeSpotify: Tweak {
         
         // Always activate ad blocking regardless of patch type
         AdBlockerGroup().activate()
-        DACAdBlockerGroup().activate()
         
         if UserDefaults.patchType.isPatching {
             activatePremiumPatchingGroup()
