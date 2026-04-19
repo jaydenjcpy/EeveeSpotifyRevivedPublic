@@ -322,9 +322,22 @@ struct EeveeSpotify: Tweak {
                class_getInstanceMethod(cls, Selector(("numberOfRows"))) != nil,
                class_getInstanceMethod(cls, Selector(("didSelectRow:"))) != nil,
                class_getInstanceMethod(cls, Selector(("cellForRow:"))) != nil {
-                UniversalSettingsIntegrationGroup().activate()
+
+                UniversalSettingsIntegrationProfileGroup().activate()
+
+                if NSClassFromString("SettingsViewController") != nil {
+                    UniversalSettingsIntegrationSettingsVCGroup().activate()
+                }
+                // RootSettingsViewController was removed in some 9.1.x builds (9.1.36).
+                // Only activate if the class exists.
+                if NSClassFromString("RootSettingsViewController") != nil {
+                    UniversalSettingsIntegrationRootSettingsVCGroup().activate()
+                }
+                // UINavigationController exists; this hook is generic and safe.
+                UniversalSettingsIntegrationNavGroup().activate()
+
             } else {
-                writeDebugLog("[INIT] Skipped UniversalSettingsIntegrationGroup (ProfileSettingsSection API mismatch)")
+                writeDebugLog("[INIT] Skipped settings integration (ProfileSettingsSection API mismatch)")
             }
             // Also activate the banner for 9.1.x to ensure visibility if menu is missing
             // V91SettingsIntegrationGroup().activate()
@@ -396,7 +409,12 @@ struct EeveeSpotify: Tweak {
         }
         
         // Always activate settings integration (except for 9.1.x which exits early above)
-        UniversalSettingsIntegrationGroup().activate()
+        UniversalSettingsIntegrationProfileGroup().activate()
+        UniversalSettingsIntegrationSettingsVCGroup().activate()
+        if NSClassFromString("RootSettingsViewController") != nil {
+            UniversalSettingsIntegrationRootSettingsVCGroup().activate()
+        }
+        UniversalSettingsIntegrationNavGroup().activate()
         SettingsIntegrationGroup().activate()
     }
 }
