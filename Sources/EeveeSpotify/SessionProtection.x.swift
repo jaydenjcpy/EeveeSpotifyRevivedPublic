@@ -339,6 +339,15 @@ class URLSessionTaskResumeHook: ClassHook<NSObject> {
             let elapsedInt = Int(elapsed)
             let path = url.path
 
+            // If we've already patched bootstrap once in this session, block any subsequent
+            // bootstrap calls. Some 9.1.x builds perform a second bootstrap very early during
+            // an internal session re-init, and that second response can overwrite our premium state.
+            if path.contains("bootstrap/v1/bootstrap"), UserDefaults.hasPatchedBootstrap {
+                writeDebugLog("[NET] Cancelled bootstrap re-fetch at \(elapsedInt)s")
+                task.cancel()
+                return
+            }
+
             // Log auth-related requests for diagnostics
             let isAuthRelated = host.contains("login5") ||
                 host.contains("apresolve") ||
