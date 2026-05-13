@@ -1,11 +1,10 @@
-name: Build Rootless Deb and inject .deb into IPA
-
+name: Build IPA (PATCHED)
 on:
   workflow_dispatch:
     inputs:
       branch:
         description: "Branch to build from"
-        default: "main"
+        default: "Master"
         required: true
         type: string
       ipa_url:
@@ -43,10 +42,15 @@ jobs:
       - name: Install build tools
         run: |
           brew install make dpkg ldid wget
-          # GNU Make for parallel builds
           echo "$(brew --prefix make)/libexec/gnubin" >> $GITHUB_PATH
-          # cyan + ipapatch for IPA injection (our sideload pipeline)
-          python3 -m pip install --upgrade pyzule-rw ipapatch
+          python3 -m pip install --upgrade --break-system-packages \
+              git+https://github.com/asdfzxcvbn/pyzule-rw.git
+          # releases/latest/download redirect avoids api.github.com rate limit (anon 60/hr -> 403)
+          ARCH=$(uname -m); [ "$ARCH" = "x86_64" ] && SUFFIX=macos-amd64 || SUFFIX=macos-arm64
+          sudo curl -fsSL "https://github.com/asdfzxcvbn/ipapatch/releases/latest/download/ipapatch.${SUFFIX}" \
+              -o /usr/local/bin/ipapatch
+          sudo chmod +x /usr/local/bin/ipapatch
+          ipapatch --help >/dev/null
 
       - name: Build EeveeSwiftProtobuf.framework from source
         env:
