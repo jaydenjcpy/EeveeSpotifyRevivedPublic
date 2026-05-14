@@ -1,3 +1,5 @@
+## My Repo Moved to [HERE](https://github.com/jaydenjcpy/EeveeSpotifyReincarnated)
+
 ![Banner](Images/banner.png?)
 
 # EeveeSpotify
